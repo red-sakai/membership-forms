@@ -77,9 +77,9 @@ export default function RegisterPage() {
                 <option value="" disabled>
                   Select membership type
                 </option>
-                <option value="regular">Regular</option>
-                <option value="student">Student</option>
-                <option value="senior">Senior</option>
+                <option value="executive">Executive</option>
+                <option value="lead">Lead</option>
+                <option value="member">Member</option>
               </select>
             </label>
           </div>
