@@ -2,12 +2,49 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 
 const registerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
   email: z.string().trim().email("Please enter a valid email address"),
+  facebookLink: z
+    .string()
+    .trim()
+    .url("Please enter a valid Facebook link")
+    .refine((value) => {
+      try {
+        const url = new URL(value);
+        return url.hostname.toLowerCase().includes("facebook.com");
+      } catch {
+        return false;
+      }
+    }, "Please provide a valid Facebook link"),
+  discordUsername: z.string().trim().min(1, "Discord username is required"),
+  linkedinLink: z
+    .string()
+    .trim()
+    .or(z.literal(""))
+    .refine((value) => {
+      if (value === "") {
+        return true;
+      }
+
+      try {
+        const url = new URL(value);
+        return url.hostname.toLowerCase().includes("linkedin.com");
+      } catch {
+        return false;
+      }
+    }, "Please enter a valid LinkedIn link"),
+  pupWebmail: z
+    .string()
+    .trim()
+    .email("Please enter a valid PUP Webmail")
+    .refine((value) => value.split("@")[1]?.toLowerCase() === "iskolarngbayan.pup.edu.ph", {
+      message: "PUP Webmail must end with @iskolarngbayan.pup.edu.ph",
+    }),
   phone: z
     .string()
     .regex(/^09\d{9}$/, "Phone number must be in the format 09xxxxxxxxx"),
@@ -15,13 +52,75 @@ const registerSchema = z.object({
     .string()
     .trim()
     .regex(/^(BS|BA|AB)/i, "Course, year, and section must start with BS, BA, or AB"),
-  membershipType: z.string().trim().min(1, "Membership type is required"),
+  certificateLink: z
+    .string()
+    .trim()
+    .url("Please enter a valid URL")
+    .refine((value) => {
+      try {
+        const url = new URL(value);
+        return url.hostname.toLowerCase().includes("drive.google.com");
+      } catch {
+        return false;
+      }
+    }, "Please provide a valid Google Drive link for your COR"),
+  collegeCampus: z.string().trim().min(1, "College or campus is required"),
+  membershipType: z.string().trim().min(1, "Department is required"),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+const COOKIE_PREFIX = "registration_";
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const registerFieldNames: Array<keyof RegisterFormValues> = [
+  "firstName",
+  "lastName",
+  "email",
+  "facebookLink",
+  "discordUsername",
+  "linkedinLink",
+  "pupWebmail",
+  "phone",
+  "courseYearSection",
+  "certificateLink",
+  "collegeCampus",
+  "membershipType",
+];
+
+const getSavedValuesFromCookies = (): Partial<Record<keyof RegisterFormValues, string>> => {
+  if (typeof document === "undefined") {
+    return {};
+  }
+
+  const cookieMap = new Map(
+    document.cookie
+      .split("; ")
+      .filter(Boolean)
+      .map((cookieItem) => {
+        const [rawName, ...rawValue] = cookieItem.split("=");
+        return [decodeURIComponent(rawName), decodeURIComponent(rawValue.join("="))] as const;
+      }),
+  );
+
+  return registerFieldNames.reduce(
+    (accumulator, field) => {
+      accumulator[field] = cookieMap.get(`${COOKIE_PREFIX}${field}`) ?? "";
+      return accumulator;
+    },
+    {} as Partial<Record<keyof RegisterFormValues, string>>,
+  );
+};
+
 export default function RegisterPage() {
+  const router = useRouter();
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormValues, string>>>({});
+  const [initialValues] = useState<Partial<Record<keyof RegisterFormValues, string>>>(() => getSavedValuesFromCookies());
+
+  const saveFieldToCookie = (field: keyof RegisterFormValues, value: string) => {
+    document.cookie = `${encodeURIComponent(`${COOKIE_PREFIX}${field}`)}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
+  };
+
+  const getDefaultValue = (field: keyof RegisterFormValues) => initialValues[field] ?? "";
 
   const validateField = (field: keyof RegisterFormValues, value: string) => {
     const result = registerSchema.shape[field].safeParse(value);
@@ -37,7 +136,20 @@ export default function RegisterPage() {
     validateField(field, event.currentTarget.value);
   };
 
+  const handleFormChange = (event: FormEvent<HTMLFormElement>) => {
+    const target = event.target as HTMLInputElement | HTMLSelectElement;
+    const field = target.name as keyof RegisterFormValues;
+
+    if (!target.name || !registerFieldNames.includes(field)) {
+      return;
+    }
+
+    saveFieldToCookie(field, target.value);
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
     const form = event.currentTarget;
     const formData = new FormData(form);
 
@@ -45,39 +157,62 @@ export default function RegisterPage() {
       firstName: String(formData.get("firstName") ?? ""),
       lastName: String(formData.get("lastName") ?? ""),
       email: String(formData.get("email") ?? ""),
+      facebookLink: String(formData.get("facebookLink") ?? ""),
+      discordUsername: String(formData.get("discordUsername") ?? ""),
+      linkedinLink: String(formData.get("linkedinLink") ?? ""),
+      pupWebmail: String(formData.get("pupWebmail") ?? ""),
       phone: String(formData.get("phone") ?? ""),
       courseYearSection: String(formData.get("courseYearSection") ?? ""),
+      certificateLink: String(formData.get("certificateLink") ?? ""),
+      collegeCampus: String(formData.get("collegeCampus") ?? ""),
       membershipType: String(formData.get("membershipType") ?? ""),
     };
 
     const result = registerSchema.safeParse(values);
 
     if (!result.success) {
-      event.preventDefault();
       const fieldErrors = result.error.flatten().fieldErrors;
       setErrors({
         firstName: fieldErrors.firstName?.[0],
         lastName: fieldErrors.lastName?.[0],
         email: fieldErrors.email?.[0],
+        facebookLink: fieldErrors.facebookLink?.[0],
+        discordUsername: fieldErrors.discordUsername?.[0],
+        linkedinLink: fieldErrors.linkedinLink?.[0],
+        pupWebmail: fieldErrors.pupWebmail?.[0],
         phone: fieldErrors.phone?.[0],
         courseYearSection: fieldErrors.courseYearSection?.[0],
+        certificateLink: fieldErrors.certificateLink?.[0],
+        collegeCampus: fieldErrors.collegeCampus?.[0],
         membershipType: fieldErrors.membershipType?.[0],
       });
       return;
     }
 
     setErrors({});
+    registerFieldNames.forEach((field) => {
+      saveFieldToCookie(field, result.data[field]);
+    });
+
+    if (result.data.membershipType === "Technology Department") {
+      router.push("/register/technology-department");
+      return;
+    }
+
+    setErrors({
+      membershipType: "This department page is not available yet. Please select Technology Department for now.",
+    });
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 px-4 py-6 font-sans text-zinc-900">
       <main className="mx-auto w-full max-w-3xl rounded-2xl border border-sky-100 bg-white/95 p-6 shadow-lg shadow-blue-100 sm:p-8">
-        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Membership Registration Form</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Registration - Personal Information</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Please fill in the required details below.
+          Please complete this personal information section of the registration.
         </p>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} onChange={handleFormChange} noValidate>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="space-y-2 text-sm">
               <span className="font-medium">First Name <span className="text-red-600">*</span></span>
@@ -85,6 +220,7 @@ export default function RegisterPage() {
                 type="text"
                 name="firstName"
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                defaultValue={getDefaultValue("firstName")}
                 onBlur={handleFieldBlur}
                 required
               />
@@ -97,6 +233,7 @@ export default function RegisterPage() {
                 type="text"
                 name="lastName"
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                defaultValue={getDefaultValue("lastName")}
                 onBlur={handleFieldBlur}
                 required
               />
@@ -109,10 +246,64 @@ export default function RegisterPage() {
                 type="email"
                 name="email"
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                defaultValue={getDefaultValue("email")}
                 onBlur={handleFieldBlur}
                 required
               />
               {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
+            </label>
+
+            <label className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium">Facebook Link <span className="text-red-600">*</span></span>
+              <input
+                type="url"
+                name="facebookLink"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                placeholder="https://www.facebook.com/..."
+                defaultValue={getDefaultValue("facebookLink")}
+                onBlur={handleFieldBlur}
+                required
+              />
+              {errors.facebookLink && <p className="text-xs text-red-600">{errors.facebookLink}</p>}
+            </label>
+
+            <label className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium">Discord Username <span className="text-red-600">*</span></span>
+              <input
+                type="text"
+                name="discordUsername"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                defaultValue={getDefaultValue("discordUsername")}
+                onBlur={handleFieldBlur}
+                required
+              />
+              {errors.discordUsername && <p className="text-xs text-red-600">{errors.discordUsername}</p>}
+            </label>
+
+            <label className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium">LinkedIn Link</span>
+              <input
+                type="url"
+                name="linkedinLink"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                placeholder="https://www.linkedin.com/in/..."
+                defaultValue={getDefaultValue("linkedinLink")}
+                onBlur={handleFieldBlur}
+              />
+              {errors.linkedinLink && <p className="text-xs text-red-600">{errors.linkedinLink}</p>}
+            </label>
+
+            <label className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium">PUP Webmail <span className="text-red-600">*</span></span>
+              <input
+                type="email"
+                name="pupWebmail"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                defaultValue={getDefaultValue("pupWebmail")}
+                onBlur={handleFieldBlur}
+                required
+              />
+              {errors.pupWebmail && <p className="text-xs text-red-600">{errors.pupWebmail}</p>}
             </label>
 
             <label className="space-y-2 text-sm sm:col-span-2">
@@ -127,6 +318,7 @@ export default function RegisterPage() {
                 maxLength={11}
                 placeholder="09xxxxxxxxx"
                 title="Phone number must be in the format 09xxxxxxxxx"
+                defaultValue={getDefaultValue("phone")}
                 onBlur={handleFieldBlur}
                 required
               />
@@ -140,6 +332,7 @@ export default function RegisterPage() {
                 name="courseYearSection"
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
                 placeholder="e.g. BSCpE 2-5"
+                defaultValue={getDefaultValue("courseYearSection")}
                 onBlur={handleFieldBlur}
                 required
               />
@@ -147,20 +340,95 @@ export default function RegisterPage() {
             </label>
 
             <label className="space-y-2 text-sm sm:col-span-2">
-              <span className="font-medium">Membership Type <span className="text-red-600">*</span></span>
+              <span className="font-medium">Certificate of Registration/Enrollment <span className="text-red-600">*</span></span>
+              <input
+                type="url"
+                name="certificateLink"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                placeholder="https://drive.google.com/..."
+                defaultValue={getDefaultValue("certificateLink")}
+                onBlur={handleFieldBlur}
+                required
+              />
+              {errors.certificateLink && <p className="text-xs text-red-600">{errors.certificateLink}</p>}
+            </label>
+
+            <label className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium">Which PUP college/campus do you belong to? <span className="text-red-600">*</span></span>
+              <select
+                name="collegeCampus"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                required
+                defaultValue={getDefaultValue("collegeCampus")}
+                onBlur={handleFieldBlur}
+              >
+                <option value="" disabled>
+                  Select college/campus
+                </option>
+                <option value="College of Accountancy and Finance (CAF)">College of Accountancy and Finance (CAF)</option>
+                <option value="College of Architecture, Design and the Built Environment (CADBE)">College of Architecture, Design and the Built Environment (CADBE)</option>
+                <option value="College of Arts and Letters (CAL)">College of Arts and Letters (CAL)</option>
+                <option value="College of Business Administration (CBA)">College of Business Administration (CBA)</option>
+                <option value="College of Communication (COC)">College of Communication (COC)</option>
+                <option value="College of Computer and Information Sciences (CCIS)">College of Computer and Information Sciences (CCIS)</option>
+                <option value="College of Education (COED)">College of Education (COED)</option>
+                <option value="College of Engineering (CE)">College of Engineering (CE)</option>
+                <option value="College of Human Kinetics (CHK)">College of Human Kinetics (CHK)</option>
+                <option value="College of Law (COL)">College of Law (COL)</option>
+                <option value="College of Political Science and Public Administration (CPSPA)">College of Political Science and Public Administration (CPSPA)</option>
+                <option value="College of Social Sciences and Development (CSSD)">College of Social Sciences and Development (CSSD)</option>
+                <option value="College of Science (CS)">College of Science (CS)</option>
+                <option value="College of Tourism, Hospitality and Transportation Management (CTHTM)">College of Tourism, Hospitality and Transportation Management (CTHTM)</option>
+                <option value="Institute of Technology (ITECH)">Institute of Technology (ITECH)</option>
+                <option value="Open University System (OU)">Open University System (OU)</option>
+                <option value="Laboratory High School">Laboratory High School</option>
+                <option value="Senior High School">Senior High School</option>
+                <option value="Alfonso, Cavite">Alfonso, Cavite</option>
+                <option value="Bansud, Oriental Mindoro">Bansud, Oriental Mindoro</option>
+                <option value="Bataan">Bataan</option>
+                <option value="Biñan, Laguna">Biñan, Laguna</option>
+                <option value="Cabiao, Nueva Ecija">Cabiao, Nueva Ecija</option>
+                <option value="Calauan, Laguna">Calauan, Laguna</option>
+                <option value="General Luna, Quezon">General Luna, Quezon</option>
+                <option value="Leyte">Leyte</option>
+                <option value="Lopez, Quezon">Lopez, Quezon</option>
+                <option value="Maragondon, Cavite">Maragondon, Cavite</option>
+                <option value="Mulanay, Quezon">Mulanay, Quezon</option>
+                <option value="Parañaque City">Parañaque City</option>
+                <option value="Pulilan, Bulacan">Pulilan, Bulacan</option>
+                <option value="Quezon City">Quezon City</option>
+                <option value="Ragay, Camarines Sur">Ragay, Camarines Sur</option>
+                <option value="Sablayan, Occidental Mindoro">Sablayan, Occidental Mindoro</option>
+                <option value="San Juan City">San Juan City</option>
+                <option value="San Pedro, Laguna">San Pedro, Laguna</option>
+                <option value="Sta. Maria, Bulacan">Sta. Maria, Bulacan</option>
+                <option value="Sta. Rosa, Laguna">Sta. Rosa, Laguna</option>
+                <option value="Sto. Tomas, Batangas">Sto. Tomas, Batangas</option>
+                <option value="Taguig City">Taguig City</option>
+                <option value="Unisan, Quezon">Unisan, Quezon</option>
+              </select>
+              {errors.collegeCampus && <p className="text-xs text-red-600">{errors.collegeCampus}</p>}
+            </label>
+
+            <label className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium">Which department would you like to apply to as a committee member? <span className="text-red-600">*</span></span>
               <select
                 name="membershipType"
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
                 required
-                defaultValue=""
+                defaultValue={getDefaultValue("membershipType")}
                 onBlur={handleFieldBlur}
               >
                 <option value="" disabled>
-                  Select membership type
+                  Select department
                 </option>
-                <option value="executive">Executive</option>
-                <option value="lead">Lead</option>
-                <option value="member">Member</option>
+                <option value="Technology Department">Technology Department</option>
+                <option value="Operations Department">Operations Department</option>
+                <option value="Creatives Department">Creatives Department</option>
+                <option value="Marketing Department">Marketing Department</option>
+                <option value="Relations Department: Public">Relations Department: Public</option>
+                <option value="Relations Department: Community">Relations Department: Community</option>
+                <option value="Administrative Department">Administrative Department</option>
               </select>
               {errors.membershipType && <p className="text-xs text-red-600">{errors.membershipType}</p>}
             </label>
@@ -170,7 +438,7 @@ export default function RegisterPage() {
             type="submit"
             className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700"
           >
-            Submit Registration
+            Continue
           </button>
         </form>
       </main>
