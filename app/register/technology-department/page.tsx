@@ -18,7 +18,19 @@ export default function TechnologyDepartmentPage() {
       return;
     }
 
-    router.push("/register/technology-department/committee-member");
+    const committeeMemberRouteByDepartment: Record<string, string> = {
+      Cybersecurity: "/register/technology-department/cybersecurity-lead",
+      Networking: "/register/technology-department/networking-lead",
+      "AI & Data Science": "/register/technology-department/ai-data-science-lead",
+      Programming: "/register/technology-department/programming-lead",
+      "OS & IT": "/register/technology-department/os-it-lead",
+    };
+
+    const nextRoute =
+      committeeMemberRouteByDepartment[chosenDepartment] ??
+      "/register/technology-department/committee-member";
+
+    router.push(nextRoute);
   };
 
   return (
@@ -121,7 +133,7 @@ export default function TechnologyDepartmentPage() {
                 checked={technologyTrack === "committee-member"}
                 onChange={(event) => setTechnologyTrack(event.currentTarget.value)}
               />
-              Apply as a committee member
+              Apply as {chosenDepartment || "{{ chosen_department }}"} Lead or Co-Lead
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
