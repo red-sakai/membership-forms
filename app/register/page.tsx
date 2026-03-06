@@ -214,6 +214,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (result.data.membershipType === "Operations Department") {
+      router.push("/register/operations-department");
+      return;
+    }
+
     setErrors({
       membershipType: "This department page is not available yet. Please select Technology Department for now.",
     });
