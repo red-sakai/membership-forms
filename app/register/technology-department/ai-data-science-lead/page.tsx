@@ -52,6 +52,7 @@ export default function AIDataScienceLeadPage() {
     const firstName = getRegistrationCookieValue("firstName");
     const lastName = getRegistrationCookieValue("lastName");
     const email = getRegistrationCookieValue("email");
+    const fullName = `${firstName} ${lastName}`.trim();
 
     if (!firstName || !lastName || !email) {
       setSubmitError("Missing personal information. Please complete the Personal Information page first.");
@@ -87,6 +88,21 @@ export default function AIDataScienceLeadPage() {
     if (error) {
       setIsSubmitting(false);
       setSubmitError(error.message);
+      return;
+    }
+
+    const { error: interviewError } = await supabase.from("to_be_interviewed").insert({
+      name: fullName,
+      email,
+      department: "Technology",
+      team: "AI & Data Science",
+      role: position === "lead" ? "Lead" : "Co-Lead",
+      status: "pending",
+    });
+
+    if (interviewError) {
+      setIsSubmitting(false);
+      setSubmitError(interviewError.message);
       return;
     }
 
