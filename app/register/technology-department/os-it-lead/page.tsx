@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function OSITLeadPage() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [position, setPosition] = useState<"lead" | "co-lead" | "">("");
+  const [canSubmit, setCanSubmit] = useState(false);
+
+  const refreshCanSubmit = () => {
+    setTimeout(() => {
+      setCanSubmit(formRef.current?.checkValidity() ?? false);
+    }, 0);
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -23,7 +31,13 @@ export default function OSITLeadPage() {
           <span className="font-semibold">Note: The application for lead and co-lead will require an interview for the position, in the case wherein you are not accepted as lead or co-lead, you will automatically be recruited as a cadet instead.</span>
         </p>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form
+          ref={formRef}
+          className="mt-8 space-y-6"
+          onSubmit={handleSubmit}
+          onInput={refreshCanSubmit}
+          onChange={refreshCanSubmit}
+        >
           <fieldset className="space-y-3 rounded-xl border border-sky-200 bg-sky-50/70 p-4">
             <legend className="px-2 text-sm font-semibold">
               What position do you want to apply for? <span className="text-red-600">*</span>
@@ -127,7 +141,8 @@ export default function OSITLeadPage() {
 
               <button
                 type="submit"
-                className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700"
+                className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={!canSubmit}
               >
                 Submit
               </button>

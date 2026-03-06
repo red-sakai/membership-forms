@@ -34,19 +34,21 @@ export default function CreativesDepartmentPage() {
   const roleOptions = selectedTeam ? ROLE_OPTIONS_BY_TEAM[selectedTeam] : [];
 
   const refreshCanSubmit = () => {
-    const form = formRef.current;
+    setTimeout(() => {
+      const form = formRef.current;
 
-    if (!form) {
-      setCanSubmit(false);
-      return;
-    }
+      if (!form) {
+        setCanSubmit(false);
+        return;
+      }
 
-    const checkedSoftwareCount = form.querySelectorAll('input[name="creativeSoftware"]:checked').length;
-    const otherSoftwareCheckbox = form.elements.namedItem("creativeSoftwareOtherChecked") as HTMLInputElement | null;
-    const hasSoftwareSelection = checkedSoftwareCount > 0 || Boolean(otherSoftwareCheckbox?.checked);
-    const isFormValid = form.checkValidity();
+      const checkedSoftwareCount = form.querySelectorAll('input[name="creativeSoftware"]:checked').length;
+      const otherSoftwareCheckbox = form.elements.namedItem("creativeSoftwareOtherChecked") as HTMLInputElement | null;
+      const hasSoftwareSelection = checkedSoftwareCount > 0 || Boolean(otherSoftwareCheckbox?.checked);
+      const isFormValid = form.checkValidity();
 
-    setCanSubmit(isFormValid && hasSoftwareSelection);
+      setCanSubmit(isFormValid && hasSoftwareSelection);
+    }, 0);
   };
 
   const handleTeamChange = (nextTeam: string) => {
