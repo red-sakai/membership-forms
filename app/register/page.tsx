@@ -219,8 +219,13 @@ export default function RegisterPage() {
       return;
     }
 
+    if (result.data.membershipType === "Creatives Department") {
+      router.push("/register/creatives-department");
+      return;
+    }
+
     setErrors({
-      membershipType: "This department page is not available yet. Please select Technology Department for now.",
+      membershipType: "This department page is not available yet. Please select Technology, Operations, or Creatives Department for now.",
     });
   };
 
