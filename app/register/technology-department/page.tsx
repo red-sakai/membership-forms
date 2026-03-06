@@ -8,6 +8,13 @@ export default function TechnologyDepartmentPage() {
   const formRef = useRef<HTMLFormElement>(null);
   const [chosenDepartment, setChosenDepartment] = useState("");
   const [technologyTrack, setTechnologyTrack] = useState("");
+  const [canProceed, setCanProceed] = useState(false);
+
+  const refreshCanProceed = () => {
+    setTimeout(() => {
+      setCanProceed(formRef.current?.checkValidity() ?? false);
+    }, 0);
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,7 +88,13 @@ export default function TechnologyDepartmentPage() {
           <p>Refer to our primer for a detailed view of the roles and responsibilities.</p>
         </section>
 
-        <form ref={formRef} className="mt-6 space-y-2 text-sm" onSubmit={handleSubmit}>
+        <form
+          ref={formRef}
+          className="mt-6 space-y-2 text-sm"
+          onSubmit={handleSubmit}
+          onInput={refreshCanProceed}
+          onChange={refreshCanProceed}
+        >
           <label className="space-y-2 text-sm sm:col-span-2">
             <span className="font-medium">Which technology department do you want to apply to? <span className="text-red-600">*</span></span>
             <select
@@ -158,8 +171,9 @@ export default function TechnologyDepartmentPage() {
 
             <button
               type={technologyTrack === "committee-member" ? "button" : "submit"}
-              className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
               onClick={technologyTrack === "committee-member" ? handleNextClick : undefined}
+              disabled={!canProceed}
             >
               {technologyTrack === "committee-member" ? "Next" : "Submit"}
             </button>

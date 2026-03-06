@@ -224,8 +224,28 @@ export default function RegisterPage() {
       return;
     }
 
+    if (result.data.membershipType === "Marketing Department") {
+      router.push("/register/marketing-department");
+      return;
+    }
+
+    if (result.data.membershipType === "Relations Department: Public") {
+      router.push("/register/relations-department-public");
+      return;
+    }
+
+    if (result.data.membershipType === "Relations Department: Community") {
+      router.push("/register/relations-department-community");
+      return;
+    }
+
+    if (result.data.membershipType === "Administrative Department") {
+      router.push("/register/administrative-department");
+      return;
+    }
+
     setErrors({
-      membershipType: "This department page is not available yet. Please select Technology, Operations, or Creatives Department for now.",
+      membershipType: "This department page is not available yet. Please select Technology, Operations, Creatives, Marketing, Relations Department: Public, Relations Department: Community, or Administrative Department for now.",
     });
   };
 

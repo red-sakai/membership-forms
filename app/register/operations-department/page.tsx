@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function OperationsDepartmentPage() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [operationsCommittee, setOperationsCommittee] = useState("");
   const [programsRole, setProgramsRole] = useState("");
   const [operationsRole, setOperationsRole] = useState("");
   const [mediaDocumentationRole, setMediaDocumentationRole] = useState("");
+  const [canSubmit, setCanSubmit] = useState(false);
+
+  const refreshCanSubmit = () => {
+    setTimeout(() => {
+      setCanSubmit(formRef.current?.checkValidity() ?? false);
+    }, 0);
+  };
 
   const handleOperationsRoleChange = (selectedRole: string) => {
     setOperationsRole(selectedRole);
@@ -50,7 +58,13 @@ export default function OperationsDepartmentPage() {
           </ul>
         </section>
 
-        <form className="mt-6 space-y-2 text-sm" onSubmit={handleSubmit}>
+        <form
+          ref={formRef}
+          className="mt-6 space-y-2 text-sm"
+          onSubmit={handleSubmit}
+          onInput={refreshCanSubmit}
+          onChange={refreshCanSubmit}
+        >
           <label className="mt-4 block space-y-2 text-sm sm:col-span-2">
             <span className="font-medium">Which committee do you want to apply for in the Operations Department? <span className="text-red-600">*</span></span>
             <select
@@ -762,7 +776,8 @@ export default function OperationsDepartmentPage() {
 
             <button
               type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              disabled={!canSubmit}
             >
               Submit
             </button>
