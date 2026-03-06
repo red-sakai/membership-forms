@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
+import { createSupabasePublicClient } from "@/lib/supabase";
+
 type PublicRelationsTeamOption =
   | "Organization Partnership Team"
   | "Community Partnership Team"
@@ -24,12 +26,46 @@ const ROLE_OPTIONS_BY_TEAM: Record<PublicRelationsTeamOption, readonly string[]>
   ],
 };
 
+const COOKIE_PREFIX = "registration_";
+
+const publicQuestionFieldNames = [
+  "organizationPartnershipQuestion1",
+  "organizationPartnershipQuestion2",
+  "organizationPartnershipQuestion3",
+  "communityPartnershipQuestion1",
+  "communityPartnershipQuestion2",
+  "communityPartnershipQuestion3",
+  "partnershipComplianceQuestion1",
+  "partnershipComplianceQuestion2",
+] as const;
+
+const getRegistrationCookieValue = (key: string) => {
+  if (typeof document === "undefined") {
+    return "";
+  }
+
+  const cookies = new Map(
+    document.cookie
+      .split("; ")
+      .filter(Boolean)
+      .map((cookieItem) => {
+        const [rawName, ...rawValue] = cookieItem.split("=");
+        return [decodeURIComponent(rawName), decodeURIComponent(rawValue.join("="))] as const;
+      }),
+  );
+
+  return cookies.get(`${COOKIE_PREFIX}${key}`) ?? "";
+};
+
 export default function RelationsDepartmentPublicPage() {
   const router = useRouter();
+  const supabase = createSupabasePublicClient();
   const formRef = useRef<HTMLFormElement>(null);
   const [selectedTeam, setSelectedTeam] = useState<PublicRelationsTeamOption | "">("");
   const [selectedRole, setSelectedRole] = useState("");
   const [canSubmit, setCanSubmit] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const roleOptions = selectedTeam ? ROLE_OPTIONS_BY_TEAM[selectedTeam] : [];
 
@@ -39,12 +75,58 @@ export default function RelationsDepartmentPublicPage() {
     }, 0);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!event.currentTarget.reportValidity()) {
       return;
     }
+
+    const firstName = getRegistrationCookieValue("firstName");
+    const lastName = getRegistrationCookieValue("lastName");
+    const email = getRegistrationCookieValue("email");
+
+    if (!firstName || !lastName || !email) {
+      setSubmitError("Missing personal information. Please complete the Personal Information page first.");
+      return;
+    }
+
+    if (!selectedTeam || !selectedRole) {
+      setSubmitError("Please select both team and role before submitting.");
+      return;
+    }
+
+    setSubmitError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const questionAnswers: Record<string, string> = {};
+
+    publicQuestionFieldNames.forEach((fieldName) => {
+      const value = String(formData.get(fieldName) ?? "").trim();
+
+      if (value !== "") {
+        questionAnswers[fieldName] = value;
+      }
+    });
+
+    setIsSubmitting(true);
+
+    const { error } = await supabase.from("registration_relations_public_department").insert({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      team: selectedTeam,
+      application_role: selectedRole,
+      question_answers: questionAnswers,
+    });
+
+    if (error) {
+      setIsSubmitting(false);
+      setSubmitError(error.message);
+      return;
+    }
+
+    setIsSubmitting(false);
 
     router.push("/register/relations-department-public/submit");
   };
@@ -300,11 +382,17 @@ export default function RelationsDepartmentPublicPage() {
             <button
               type="submit"
               className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              disabled={!canSubmit}
+              disabled={!canSubmit || isSubmitting}
             >
-              Submit
+              {isSubmitting ? "Saving..." : "Submit"}
             </button>
           </div>
+
+          {submitError && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {submitError}
+            </p>
+          )}
         </form>
       </main>
     </div>
