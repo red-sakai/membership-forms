@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 
+import { createSupabasePublicClient } from "@/lib/supabase";
+
 const registerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
@@ -126,7 +128,10 @@ const getSavedValuesFromCookies = (): Partial<Record<keyof RegisterFormValues, s
 
 export default function RegisterPage() {
   const router = useRouter();
+  const supabase = createSupabasePublicClient();
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormValues, string>>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialValues] = useState<Partial<Record<keyof RegisterFormValues, string>>>(() => getSavedValuesFromCookies());
 
   const saveFieldToCookie = (field: keyof RegisterFormValues, value: string) => {
@@ -160,7 +165,7 @@ export default function RegisterPage() {
     saveFieldToCookie(field, target.value);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const form = event.currentTarget;
@@ -204,10 +209,37 @@ export default function RegisterPage() {
       return;
     }
 
+    setSubmitError(null);
     setErrors({});
     registerFieldNames.forEach((field) => {
       saveFieldToCookie(field, result.data[field]);
     });
+
+    setIsSubmitting(true);
+
+    const { error: insertError } = await supabase.from("registration_personal_info").insert({
+      first_name: result.data.firstName,
+      last_name: result.data.lastName,
+      email: result.data.email,
+      facebook_link: result.data.facebookLink,
+      facebook_post_link: result.data.facebookPostLink,
+      discord_username: result.data.discordUsername,
+      linkedin_link: result.data.linkedinLink === "" ? null : result.data.linkedinLink,
+      pup_webmail: result.data.pupWebmail,
+      phone: result.data.phone,
+      course_year_section: result.data.courseYearSection,
+      certificate_link: result.data.certificateLink,
+      college_campus: result.data.collegeCampus,
+      membership_type: result.data.membershipType,
+    });
+
+    if (insertError) {
+      setIsSubmitting(false);
+      setSubmitError(insertError.message);
+      return;
+    }
+
+    setIsSubmitting(false);
 
     if (result.data.membershipType === "Technology Department") {
       router.push("/register/technology-department");
@@ -493,11 +525,18 @@ export default function RegisterPage() {
             </label>
           </div>
 
+          {submitError && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {submitError}
+            </p>
+          )}
+
           <button
             type="submit"
+            disabled={isSubmitting}
             className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700"
           >
-            Continue
+            {isSubmitting ? "Saving..." : "Continue"}
           </button>
         </form>
       </main>

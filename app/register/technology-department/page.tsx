@@ -3,12 +3,56 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { createSupabasePublicClient } from "@/lib/supabase";
+
+const COOKIE_PREFIX = "registration_";
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+type PersonalCookieValues = {
+  firstName: string;
+  lastName: string;
+  email: string;
+};
+
+const getSavedValuesFromCookies = () => {
+  if (typeof document === "undefined") {
+    return new Map<string, string>();
+  }
+
+  return new Map(
+    document.cookie
+      .split("; ")
+      .filter(Boolean)
+      .map((cookieItem) => {
+        const [rawName, ...rawValue] = cookieItem.split("=");
+        return [decodeURIComponent(rawName), decodeURIComponent(rawValue.join("="))] as const;
+      }),
+  );
+};
+
+const getPersonalInfoFromCookies = (): PersonalCookieValues => {
+  const cookieMap = getSavedValuesFromCookies();
+
+  return {
+    firstName: cookieMap.get(`${COOKIE_PREFIX}firstName`) ?? "",
+    lastName: cookieMap.get(`${COOKIE_PREFIX}lastName`) ?? "",
+    email: cookieMap.get(`${COOKIE_PREFIX}email`) ?? "",
+  };
+};
+
+const saveFieldToCookie = (field: string, value: string) => {
+  document.cookie = `${encodeURIComponent(`${COOKIE_PREFIX}${field}`)}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
+};
+
 export default function TechnologyDepartmentPage() {
   const router = useRouter();
+  const supabase = createSupabasePublicClient();
   const formRef = useRef<HTMLFormElement>(null);
   const [chosenDepartment, setChosenDepartment] = useState("");
   const [technologyTrack, setTechnologyTrack] = useState("");
   const [canProceed, setCanProceed] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const refreshCanProceed = () => {
     setTimeout(() => {
@@ -16,8 +60,53 @@ export default function TechnologyDepartmentPage() {
     }, 0);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!event.currentTarget.reportValidity()) {
+      return;
+    }
+
+    setSubmitError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const expectations = String(formData.get("expectations") ?? "");
+    const suggestions = String(formData.get("suggestions") ?? "");
+
+    saveFieldToCookie("technologyDepartment", chosenDepartment);
+    saveFieldToCookie("technologyTrack", technologyTrack);
+    saveFieldToCookie("technologyExpectations", expectations);
+    saveFieldToCookie("technologySuggestions", suggestions);
+
+    const personalInfo = getPersonalInfoFromCookies();
+
+    if (!personalInfo.firstName || !personalInfo.lastName || !personalInfo.email) {
+      setSubmitError("Missing personal information. Please complete the Personal Information page first.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const { error: insertError } = await supabase
+      .from("registration_technology_department")
+      .insert({
+        first_name: personalInfo.firstName,
+        last_name: personalInfo.lastName,
+        email: personalInfo.email,
+        technology_department: chosenDepartment,
+        expectations,
+        suggestions,
+        application_role: "cadet",
+      });
+
+    if (insertError) {
+      setIsSubmitting(false);
+      setSubmitError(insertError.message);
+      return;
+    }
+
+    setIsSubmitting(false);
+    router.push("/register/technology-department/submit");
   };
 
   const handleNextClick = () => {
@@ -173,11 +262,17 @@ export default function TechnologyDepartmentPage() {
               type={technologyTrack === "committee-member" ? "button" : "submit"}
               className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
               onClick={technologyTrack === "committee-member" ? handleNextClick : undefined}
-              disabled={!canProceed}
+              disabled={!canProceed || isSubmitting}
             >
-              {technologyTrack === "committee-member" ? "Next" : "Submit"}
+              {technologyTrack === "committee-member" ? "Next" : isSubmitting ? "Saving..." : "Submit"}
             </button>
           </div>
+
+          {submitError && (
+            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {submitError}
+            </p>
+          )}
         </form>
       </main>
     </div>
