@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 
 import { createSupabasePublicClient } from "@/lib/supabase";
@@ -128,6 +128,7 @@ const getSavedValuesFromCookies = (): Partial<Record<keyof RegisterFormValues, s
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createSupabasePublicClient();
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormValues, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -288,6 +289,12 @@ export default function RegisterPage() {
         <p className="mt-2 text-sm text-slate-600">
           Please complete this personal information section of the registration.
         </p>
+
+        {searchParams.get("redirect") && (
+          <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Before continuing to another page, please fill in all required fields here first.
+          </p>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit} onChange={handleFormChange} noValidate>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -513,13 +520,13 @@ export default function RegisterPage() {
                 <option value="" disabled>
                   Select department
                 </option>
-                <option value="Technology Department">Technology Department</option>
-                <option value="Operations Department">Operations Department</option>
+                <option value="Technology Department" disabled>Technology Department</option>
+                <option value="Operations Department" disabled>Operations Department</option>
                 <option value="Creatives Department">Creatives Department</option>
-                <option value="Marketing Department">Marketing Department</option>
-                <option value="Relations Department: Public">Relations Department: Public</option>
-                <option value="Relations Department: Community">Relations Department: Community</option>
-                <option value="Administrative Department">Administrative Department</option>
+                <option value="Marketing Department" disabled>Marketing Department</option>
+                <option value="Relations Department: Public" disabled>Relations Department: Public</option>
+                <option value="Relations Department: Community" disabled>Relations Department: Community</option>
+                <option value="Administrative Department" disabled>Administrative Department</option>
               </select>
               {errors.membershipType && <p className="text-xs text-red-600">{errors.membershipType}</p>}
             </label>
