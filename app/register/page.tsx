@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 
@@ -126,7 +126,7 @@ const getSavedValuesFromCookies = (): Partial<Record<keyof RegisterFormValues, s
   );
 };
 
-export default function RegisterPage() {
+function RegisterFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabasePublicClient();
@@ -548,5 +548,13 @@ export default function RegisterPage() {
         </form>
       </main>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100" />}>
+      <RegisterFormPage />
+    </Suspense>
   );
 }
