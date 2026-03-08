@@ -5,7 +5,6 @@ const REQUIRED_REGISTRATION_COOKIES = [
   "registration_lastName",
   "registration_email",
   "registration_facebookLink",
-  "registration_facebookPostLink",
   "registration_discordUsername",
   "registration_pupWebmail",
   "registration_phone",

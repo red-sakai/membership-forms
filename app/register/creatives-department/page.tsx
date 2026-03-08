@@ -150,8 +150,8 @@ export default function CreativesDepartmentPage() {
     const formData = new FormData(event.currentTarget);
     const questionAnswers = {
       creative_interest_motivation: String(formData.get("creativeInterestMotivation") ?? ""),
-      creative_experience: String(formData.get("creativeExperience") ?? ""),
-      creative_achievements: String(formData.get("creativeAchievements") ?? ""),
+      creative_project_meaning: String(formData.get("creativeProjectMeaning") ?? ""),
+      creative_block_overcoming: String(formData.get("creativeBlockOvercoming") ?? ""),
       creative_work_samples_link: String(formData.get("creativeWorkSamplesLink") ?? ""),
       creative_eportfolio_link: String(formData.get("creativeEportfolioLink") ?? ""),
       creative_software: JSON.parse(String(formData.get("creativeSoftwareJson") ?? "[]")),
@@ -298,18 +298,18 @@ export default function CreativesDepartmentPage() {
               </label>
 
               <label className="block space-y-2 text-sm">
-                <span className="font-medium">How many years of experience do you have in the Creative field? Have you had any previous roles related to Multimedia Editing? <span className="text-red-600">*</span></span>
+                <span className="font-medium">Tell us about a creative work or project you enjoyed making. What made the process meaningful to you? <span className="text-red-600">*</span></span>
                 <textarea
-                  name="creativeExperience"
+                  name="creativeProjectMeaning"
                   className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
                   required
                 />
               </label>
 
               <label className="block space-y-2 text-sm">
-                <span className="font-medium">Please share your notable achievements and experiences in the field, including skills or projects you&apos;re proud of. <span className="text-red-600">*</span></span>
+                <span className="font-medium">When you experience creative block or run out of ideas while working on a design or project, how do you usually overcome it? <span className="text-red-600">*</span></span>
                 <textarea
-                  name="creativeAchievements"
+                  name="creativeBlockOvercoming"
                   className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
                   required
                 />
