@@ -23,18 +23,6 @@ const registerSchema = z.object({
         return false;
       }
     }, "Please provide a valid Facebook link"),
-  facebookPostLink: z
-    .string()
-    .trim()
-    .url("Please enter a valid Facebook post link")
-    .refine((value) => {
-      try {
-        const url = new URL(value);
-        return url.hostname.toLowerCase().includes("facebook.com");
-      } catch {
-        return false;
-      }
-    }, "Please provide a valid Facebook post link"),
   discordUsername: z.string().trim().min(1, "Discord username is required"),
   linkedinLink: z
     .string()
@@ -91,7 +79,6 @@ const registerFieldNames: Array<keyof RegisterFormValues> = [
   "lastName",
   "email",
   "facebookLink",
-  "facebookPostLink",
   "discordUsername",
   "linkedinLink",
   "pupWebmail",
@@ -177,7 +164,6 @@ function RegisterFormPage() {
       lastName: String(formData.get("lastName") ?? ""),
       email: String(formData.get("email") ?? ""),
       facebookLink: String(formData.get("facebookLink") ?? ""),
-      facebookPostLink: String(formData.get("facebookPostLink") ?? ""),
       discordUsername: String(formData.get("discordUsername") ?? ""),
       linkedinLink: String(formData.get("linkedinLink") ?? ""),
       pupWebmail: String(formData.get("pupWebmail") ?? ""),
@@ -197,7 +183,6 @@ function RegisterFormPage() {
         lastName: fieldErrors.lastName?.[0],
         email: fieldErrors.email?.[0],
         facebookLink: fieldErrors.facebookLink?.[0],
-        facebookPostLink: fieldErrors.facebookPostLink?.[0],
         discordUsername: fieldErrors.discordUsername?.[0],
         linkedinLink: fieldErrors.linkedinLink?.[0],
         pupWebmail: fieldErrors.pupWebmail?.[0],
@@ -223,7 +208,6 @@ function RegisterFormPage() {
       last_name: result.data.lastName,
       email: result.data.email,
       facebook_link: result.data.facebookLink,
-      facebook_post_link: result.data.facebookPostLink,
       discord_username: result.data.discordUsername,
       linkedin_link: result.data.linkedinLink === "" ? null : result.data.linkedinLink,
       pup_webmail: result.data.pupWebmail,
@@ -349,20 +333,6 @@ function RegisterFormPage() {
                 required
               />
               {errors.facebookLink && <p className="text-xs text-red-600">{errors.facebookLink}</p>}
-            </label>
-
-            <label className="space-y-2 text-sm sm:col-span-2">
-              <span className="font-medium">Facebook Post Link <span className="text-red-600">*</span></span>
-              <input
-                type="url"
-                name="facebookPostLink"
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-                placeholder="https://www.facebook.com/..."
-                defaultValue={getDefaultValue("facebookPostLink")}
-                onBlur={handleFieldBlur}
-                required
-              />
-              {errors.facebookPostLink && <p className="text-xs text-red-600">{errors.facebookPostLink}</p>}
             </label>
 
             <label className="space-y-2 text-sm sm:col-span-2">
