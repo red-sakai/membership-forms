@@ -74,6 +74,53 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const COOKIE_PREFIX = "registration_";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const PERSONAL_INFO_RATE_LIMIT_WINDOW_MS = 15 * 1000;
+const PERSONAL_INFO_RATE_LIMIT_STORAGE_KEY = "registration_personal_info_last_submit_at";
+
+type PersonalInfoRecord = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  facebook_link: string;
+  discord_username: string;
+  linkedin_link: string | null;
+  pup_webmail: string;
+  phone: string;
+  course_year_section: string;
+  certificate_link: string;
+  college_campus: string;
+  membership_type: string;
+};
+
+const toPersonalInfoRecord = (values: RegisterFormValues): PersonalInfoRecord => ({
+  first_name: values.firstName,
+  last_name: values.lastName,
+  email: values.email,
+  facebook_link: values.facebookLink,
+  discord_username: values.discordUsername,
+  linkedin_link: values.linkedinLink === "" ? null : values.linkedinLink,
+  pup_webmail: values.pupWebmail,
+  phone: values.phone,
+  course_year_section: values.courseYearSection,
+  certificate_link: values.certificateLink,
+  college_campus: values.collegeCampus,
+  membership_type: values.membershipType,
+});
+
+const isSamePersonalInfo = (existing: PersonalInfoRecord, next: PersonalInfoRecord) =>
+  existing.first_name === next.first_name &&
+  existing.last_name === next.last_name &&
+  existing.email === next.email &&
+  existing.facebook_link === next.facebook_link &&
+  existing.discord_username === next.discord_username &&
+  (existing.linkedin_link ?? null) === (next.linkedin_link ?? null) &&
+  existing.pup_webmail === next.pup_webmail &&
+  existing.phone === next.phone &&
+  existing.course_year_section === next.course_year_section &&
+  existing.certificate_link === next.certificate_link &&
+  existing.college_campus === next.college_campus &&
+  existing.membership_type === next.membership_type;
+
 const registerFieldNames: Array<keyof RegisterFormValues> = [
   "firstName",
   "lastName",
@@ -201,28 +248,49 @@ function RegisterFormPage() {
       saveFieldToCookie(field, result.data[field]);
     });
 
-    setIsSubmitting(true);
+    const now = Date.now();
+    const lastSubmittedAt = Number(window.localStorage.getItem(PERSONAL_INFO_RATE_LIMIT_STORAGE_KEY) ?? "0");
+    const msSinceLastSubmit = now - lastSubmittedAt;
 
-    const { error: insertError } = await supabase.from("registration_personal_info").insert({
-      first_name: result.data.firstName,
-      last_name: result.data.lastName,
-      email: result.data.email,
-      facebook_link: result.data.facebookLink,
-      discord_username: result.data.discordUsername,
-      linkedin_link: result.data.linkedinLink === "" ? null : result.data.linkedinLink,
-      pup_webmail: result.data.pupWebmail,
-      phone: result.data.phone,
-      course_year_section: result.data.courseYearSection,
-      certificate_link: result.data.certificateLink,
-      college_campus: result.data.collegeCampus,
-      membership_type: result.data.membershipType,
-    });
-
-    if (insertError) {
-      setIsSubmitting(false);
-      setSubmitError(insertError.message);
+    if (Number.isFinite(lastSubmittedAt) && msSinceLastSubmit < PERSONAL_INFO_RATE_LIMIT_WINDOW_MS) {
+      const secondsRemaining = Math.ceil((PERSONAL_INFO_RATE_LIMIT_WINDOW_MS - msSinceLastSubmit) / 1000);
+      setSubmitError(`Please wait ${secondsRemaining} second${secondsRemaining === 1 ? "" : "s"} before submitting again.`);
       return;
     }
+
+    setIsSubmitting(true);
+
+    const personalInfoPayload = toPersonalInfoRecord(result.data);
+
+    const { data: previousRecord, error: previousRecordError } = await supabase
+      .from("registration_personal_info")
+      .select(
+        "first_name,last_name,email,facebook_link,discord_username,linkedin_link,pup_webmail,phone,course_year_section,certificate_link,college_campus,membership_type",
+      )
+      .eq("email", personalInfoPayload.email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<PersonalInfoRecord>();
+
+    if (previousRecordError) {
+      setIsSubmitting(false);
+      setSubmitError(previousRecordError.message);
+      return;
+    }
+
+    const shouldInsertNewRecord = !previousRecord || !isSamePersonalInfo(previousRecord, personalInfoPayload);
+
+    if (shouldInsertNewRecord) {
+      const { error: insertError } = await supabase.from("registration_personal_info").insert(personalInfoPayload);
+
+      if (insertError) {
+        setIsSubmitting(false);
+        setSubmitError(insertError.message);
+        return;
+      }
+    }
+
+    window.localStorage.setItem(PERSONAL_INFO_RATE_LIMIT_STORAGE_KEY, String(Date.now()));
 
     setIsSubmitting(false);
 
