@@ -21,7 +21,7 @@ export default function CreativesDepartmentSubmitPage() {
 
         <p className="mt-6 text-sm leading-7 text-slate-700">
           Also, join us on Discord if the position you&apos;re applying for requires an interview, or join to
-          get the latest announcements: <a className="text-sky-700 underline" href="https://discord.gg/n8gGMvky" target="_blank" rel="noopener noreferrer">https://discord.gg/n8gGMvky</a>.
+          get the latest announcements: <a className="text-sky-700 underline" href="https://discord.gg/xrVuuXwuvY" target="_blank" rel="noopener noreferrer">https://discord.gg/xrVuuXwuvY</a>.
         </p>
 
         <SubmissionConfirmation />
