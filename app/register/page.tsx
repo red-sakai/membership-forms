@@ -205,17 +205,6 @@ function RegisterFormPage() {
     validateField(field, event.currentTarget.value);
   };
 
-  const handleFormChange = (event: FormEvent<HTMLFormElement>) => {
-    const target = event.target as HTMLInputElement | HTMLSelectElement;
-    const field = target.name as keyof RegisterFormValues;
-
-    if (!target.name || !registerFieldNames.includes(field)) {
-      return;
-    }
-
-    saveFieldToCookie(field, target.value);
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -366,7 +355,7 @@ function RegisterFormPage() {
           </p>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit} onChange={handleFormChange} noValidate>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="space-y-2 text-sm">
               <span className="font-medium">First Name <span className="text-red-600">*</span></span>
