@@ -1,25 +1,74 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createSupabasePublicClient } from "@/lib/supabase";
 
 const COOKIE_PREFIX = "registration_";
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
-type PersonalCookieValues = {
-  firstName: string;
-  lastName: string;
-  email: string;
+type TechnologyRole =
+  | "Enterprise Networking Lead"
+  | "Enterprise Networking Co-Lead"
+  | "CyberOps Lead"
+  | "CyberOps Co-Lead"
+  | "DevNet Lead"
+  | "DevNet Co-Lead";
+
+const TECHNOLOGY_ROLES: readonly TechnologyRole[] = [
+  "Enterprise Networking Lead",
+  "Enterprise Networking Co-Lead",
+  "CyberOps Lead",
+  "CyberOps Co-Lead",
+  "DevNet Lead",
+  "DevNet Co-Lead",
+];
+
+const ROLE_DESCRIPTIONS: Record<TechnologyRole, string> = {
+  "Enterprise Networking Lead":
+    "Mentors members through a curriculum aligned with the Cisco Certified Network Associate (CCNA), covering network fundamentals, design, configuration, security, and troubleshooting. Organizes hands-on laboratories and oversees projects that develop practical skills in managing reliable enterprise networks.",
+  "Enterprise Networking Co-Lead":
+    "Supports the Enterprise Networking Lead in mentoring members through a CCNA-aligned curriculum covering network fundamentals, design, configuration, security, and troubleshooting. Assists in organizing hands-on laboratories, coordinating networking activities, and guiding projects that build practical skills in designing, managing, and troubleshooting reliable enterprise networks.",
+  "CyberOps Lead":
+    "Mentors members through a curriculum aligned with Cisco CCNA Cybersecurity, covering threat monitoring, host and network analysis, vulnerability assessment, and incident response. Organizes security laboratories, CTF training, and projects that strengthen the team's defensive cybersecurity skills.",
+  "CyberOps Co-Lead":
+    "Supports the CyberOps Lead in mentoring members through a curriculum aligned with Cisco CCNA Cybersecurity, covering threat monitoring, host and network analysis, vulnerability assessment, and incident response. Assists in organizing security laboratories, CTF training, and hands-on projects that strengthen members' practical skills in defensive cybersecurity and security operations.",
+  "DevNet Lead":
+    "Mentors members through a curriculum aligned with Cisco CCNA Automation, formerly known as DevNet Associate, covering programming, APIs, application development, and infrastructure automation. Oversees DevNet projects and develops tools that support networking, cybersecurity, and other organizational initiatives.",
+  "DevNet Co-Lead":
+    "Supports the DevNet Lead in mentoring members through a curriculum aligned with Cisco CCNA Automation, formerly known as DevNet Associate, covering programming, APIs, application development, and infrastructure automation. Assists in overseeing DevNet projects and developing automation tools that support networking, cybersecurity, and other organizational initiatives.",
 };
 
-const getSavedValuesFromCookies = () => {
+const TRACK_BY_ROLE: Record<TechnologyRole, string> = {
+  "Enterprise Networking Lead": "Enterprise Networking",
+  "Enterprise Networking Co-Lead": "Enterprise Networking",
+  "CyberOps Lead": "CyberOps",
+  "CyberOps Co-Lead": "CyberOps",
+  "DevNet Lead": "DevNet",
+  "DevNet Co-Lead": "DevNet",
+};
+
+const QUESTIONS_BY_TRACK: Record<string, readonly string[]> = {
+  "Enterprise Networking": [
+    "What experience do you have with networking concepts (e.g., OSI/TCP-IP, configuration, or troubleshooting), and how would you help members learn them?",
+    "How would you design a hands-on laboratory or activity that helps members understand how a real enterprise network works?",
+  ],
+  CyberOps: [
+    "What experience do you have with cybersecurity (e.g., CTFs, threat monitoring, or security tools), and how would you guide members in learning them?",
+    "How would you prepare the team for a security challenge or incident-response exercise?",
+  ],
+  DevNet: [
+    "What experience do you have with programming, APIs, or automation, and how would you help members build those skills?",
+    "What kind of automation tool or project would you want the team to build, and how would you guide it?",
+  ],
+};
+
+const getRegistrationCookieValue = (key: string) => {
   if (typeof document === "undefined") {
-    return new Map<string, string>();
+    return "";
   }
 
-  return new Map(
+  const cookies = new Map(
     document.cookie
       .split("; ")
       .filter(Boolean)
@@ -28,37 +77,18 @@ const getSavedValuesFromCookies = () => {
         return [decodeURIComponent(rawName), decodeURIComponent(rawValue.join("="))] as const;
       }),
   );
-};
 
-const getPersonalInfoFromCookies = (): PersonalCookieValues => {
-  const cookieMap = getSavedValuesFromCookies();
-
-  return {
-    firstName: cookieMap.get(`${COOKIE_PREFIX}firstName`) ?? "",
-    lastName: cookieMap.get(`${COOKIE_PREFIX}lastName`) ?? "",
-    email: cookieMap.get(`${COOKIE_PREFIX}email`) ?? "",
-  };
-};
-
-const saveFieldToCookie = (field: string, value: string) => {
-  document.cookie = `${encodeURIComponent(`${COOKIE_PREFIX}${field}`)}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
+  return cookies.get(`${COOKIE_PREFIX}${key}`) ?? "";
 };
 
 export default function TechnologyDepartmentPage() {
   const router = useRouter();
   const supabase = createSupabasePublicClient();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [chosenDepartment, setChosenDepartment] = useState("");
-  const [technologyTrack, setTechnologyTrack] = useState("");
-  const [canProceed, setCanProceed] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<TechnologyRole | "">("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const refreshCanProceed = () => {
-    setTimeout(() => {
-      setCanProceed(formRef.current?.checkValidity() ?? false);
-    }, 0);
-  };
+  const track = selectedRole ? TRACK_BY_ROLE[selectedRole] : "";
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,64 +99,61 @@ export default function TechnologyDepartmentPage() {
 
     setSubmitError(null);
 
-    const formData = new FormData(event.currentTarget);
-    const expectations = String(formData.get("expectations") ?? "");
-    const suggestions = String(formData.get("suggestions") ?? "");
+    const firstName = getRegistrationCookieValue("firstName");
+    const lastName = getRegistrationCookieValue("lastName");
+    const email = getRegistrationCookieValue("email");
+    const fullName = `${firstName} ${lastName}`.trim();
 
-    saveFieldToCookie("technologyDepartment", chosenDepartment);
-    saveFieldToCookie("technologyTrack", technologyTrack);
-    saveFieldToCookie("technologyExpectations", expectations);
-    saveFieldToCookie("technologySuggestions", suggestions);
-
-    const personalInfo = getPersonalInfoFromCookies();
-
-    if (!personalInfo.firstName || !personalInfo.lastName || !personalInfo.email) {
+    if (!firstName || !lastName || !email) {
       setSubmitError("Missing personal information. Please complete the Personal Information page first.");
       return;
     }
 
+    if (!selectedRole) {
+      setSubmitError("Please select a role before submitting.");
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const questions = QUESTIONS_BY_TRACK[track];
+
     setIsSubmitting(true);
 
-    const { error: insertError } = await supabase
-      .from("registration_technology_department")
-      .insert({
-        first_name: personalInfo.firstName,
-        last_name: personalInfo.lastName,
-        email: personalInfo.email,
-        technology_department: chosenDepartment,
-        expectations,
-        suggestions,
-        application_role: "cadet",
-      });
+    const { error } = await supabase.from("registration_technology_lead_colead").insert({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      technology_department: track,
+      applying_as: selectedRole.endsWith("Co-Lead") ? "colead" : "lead",
+      expectation_answer: String(formData.get("technologyQuestion1") ?? ""),
+      certifications_answer: String(formData.get("technologyQuestion2") ?? ""),
+      extra_answers: { questions },
+    });
 
-    if (insertError) {
+    if (error) {
       setIsSubmitting(false);
-      setSubmitError(insertError.message);
+      setSubmitError(error.message);
+      return;
+    }
+
+    const { error: interviewError } = await supabase.from("to_be_interviewed").insert({
+      name: fullName,
+      email,
+      department: "Technology",
+      team: track,
+      role: selectedRole.endsWith("Co-Lead") ? "Co-Lead" : "Lead",
+      status: "pending",
+    });
+
+    if (interviewError) {
+      setIsSubmitting(false);
+      setSubmitError(interviewError.message);
       return;
     }
 
     setIsSubmitting(false);
+
     router.push("/register/technology-department/submit");
-  };
-
-  const handleNextClick = () => {
-    if (!formRef.current?.reportValidity()) {
-      return;
-    }
-
-    const committeeMemberRouteByDepartment: Record<string, string> = {
-      Cybersecurity: "/register/technology-department/cybersecurity-lead",
-      Networking: "/register/technology-department/networking-lead",
-      "AI & Data Science": "/register/technology-department/ai-data-science-lead",
-      Programming: "/register/technology-department/programming-lead",
-      "OS & IT": "/register/technology-department/os-it-lead",
-    };
-
-    const nextRoute =
-      committeeMemberRouteByDepartment[chosenDepartment] ??
-      "/register/technology-department/committee-member";
-
-    router.push(nextRoute);
   };
 
   return (
@@ -135,119 +162,73 @@ export default function TechnologyDepartmentPage() {
         <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Registration - Technology Department</h1>
 
         <p className="mt-4 text-sm leading-6 text-slate-700">
-          The Technology Department is responsible for driving technical excellence and innovation within CNCP. It consists of four key areas: Cybersecurity, Networking, AI & Data Science, and Programming. The department focuses on providing mentorship, managing projects, and organizing hands-on learning experiences. Members are encouraged to apply their skills in real-world scenarios, such as cybersecurity competitions, networking events, and data-driven projects, while gaining valuable leadership experience and exposure to industry practices.
+          The Technology Department is responsible for driving technical excellence and innovation within CNCP.
+          It consists of three areas: Enterprise Networking, CyberOps, and DevNet. The department focuses on
+          providing mentorship, managing projects, and organizing hands-on learning experiences.
         </p>
 
-        <section className="mt-6">
-          <h2 className="text-base font-semibold text-slate-900">What’s in it for you?</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
-            <li>Learn different technologies in different departments</li>
-            <li>Join events</li>
-            <li>Expand your network</li>
-            <li>Collaborate with members</li>
-            <li>Access to resources</li>
-            <li>Portfolio building</li>
-            <li>Innovative environment</li>
-          </ul>
-        </section>
+        <p className="mt-4 text-sm leading-6 text-slate-700">
+          For detailed information on each department role, you can refer to{" "}
+          <a
+            className="font-medium text-sky-700 underline"
+            href="https://docs.google.com/document/d/1dU6wpyFiGRfjeYCiymvxjvigK2m3VN2BdRBaZOwL8ww/edit?tab=t.0#heading=h.vixkji6185jn"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            this primer
+          </a>.
+        </p>
 
-        <section className="mt-6 space-y-4 text-sm leading-6 text-slate-700">
-          <p>Below is an overview of each area within the technology department.</p>
-
-          <p>
-            <span className="font-semibold text-slate-900">Cybersecurity:</span> focuses on ensuring the security of devices and code by adhering to security best practices. Members will represent the organization in upcoming Capture-the-Flag (CTF) events, engage in hands-on activities focused on exploiting vulnerabilities, building security tools, and supporting projects through vulnerability assessments and bug bounty initiatives.
-          </p>
-
-          <p>
-            <span className="font-semibold text-slate-900">AI &amp; Data Science:</span> focuses on analyzing data within the organization to solve problems, improve systems, and support KPIs. Members will gain hands-on experience with data analytics tools and explore the fundamentals of machine learning.
-          </p>
-
-          <p>
-            <span className="font-semibold text-slate-900">Networking:</span> builds foundational knowledge of the OSI and TCP/IP models to understand how data travels through a network. Members will gain practical experience configuring network devices and implementing security protocols.
-          </p>
-
-          <p>
-            <span className="font-semibold text-slate-900">Programming:</span> develops skills in various programming languages and frameworks, focusing on creating software solutions and supporting other technical projects.
-          </p>
-
-          <p>
-            <span className="font-semibold text-slate-900">OS &amp; IT:</span> focuses on building members’ foundational skills in computer systems, hardware, and operating environments. This department provides practical and technical learning experiences essential for future system administrators, IT specialists, and network engineers.
-          </p>
-
-          <p>Refer to our primer for a detailed view of the roles and responsibilities.</p>
-        </section>
-
-        <form
-          ref={formRef}
-          className="mt-6 space-y-2 text-sm"
-          onSubmit={handleSubmit}
-          onInput={refreshCanProceed}
-          onChange={refreshCanProceed}
-        >
-          <label className="space-y-2 text-sm sm:col-span-2">
-            <span className="font-medium">Which technology department do you want to apply to? <span className="text-red-600">*</span></span>
-            <select
-              name="technologyDepartment"
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-              required
-              value={chosenDepartment}
-              onChange={(event) => setChosenDepartment(event.currentTarget.value)}
-            >
-              <option value="" disabled>
-                Select technology department
-              </option>
-              <option value="Cybersecurity">Cybersecurity</option>
-              <option value="Networking">Networking</option>
-              <option value="AI & Data Science">AI & Data Science</option>
-              <option value="Programming">Programming</option>
-              <option value="OS & IT">OS & IT</option>
-            </select>
-          </label>
-
-          <label className="mt-4 block space-y-2 text-sm sm:col-span-2">
-            <span className="font-medium">What are your expectations? <span className="text-red-600">*</span></span>
-            <textarea
-              name="expectations"
-              className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-              required
-            />
-          </label>
-
-          <label className="mt-4 block space-y-2 text-sm sm:col-span-2">
-            <span className="font-medium">What are your suggestions for us to meet your expectations? <span className="text-red-600">*</span></span>
-            <textarea
-              name="suggestions"
-              className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-              required
-            />
-          </label>
-
-          <fieldset className="mt-4 space-y-2 rounded-md border border-slate-200 p-3 sm:col-span-2">
-            <legend className="px-1 text-sm font-medium">
-              Would you like to apply as a committee member or join as {chosenDepartment || "{{ chosen_department }}"} cadet? <span className="text-red-600">*</span>
+        <form className="mt-6 space-y-4 text-sm" onSubmit={handleSubmit}>
+          <fieldset className="space-y-3 rounded-xl border border-sky-200 bg-sky-50/70 p-4 sm:col-span-2">
+            <legend className="px-2 text-sm font-semibold">
+              What position would you like to apply for? <span className="text-red-600">*</span>
             </legend>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="radio"
-                name="technologyTrack"
-                value="committee-member"
-                required
-                checked={technologyTrack === "committee-member"}
-                onChange={(event) => setTechnologyTrack(event.currentTarget.value)}
-              />
-              Apply as {chosenDepartment || "{{ chosen_department }}"} Lead or Co-Lead
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="radio"
-                name="technologyTrack"
-                value="cadet"
-                checked={technologyTrack === "cadet"}
-                onChange={(event) => setTechnologyTrack(event.currentTarget.value)}
-              />
-              Join as {chosenDepartment || "{{ chosen_department }}"} cadet
-            </label>
+
+            {TECHNOLOGY_ROLES.map((role) => (
+              <label key={role} className="flex items-start gap-3 text-sm">
+                <input
+                  type="radio"
+                  name="technologyRole"
+                  value={role}
+                  className="mt-1"
+                  checked={selectedRole === role}
+                  onChange={() => setSelectedRole(role)}
+                  required
+                />
+                <span>{role}</span>
+              </label>
+            ))}
           </fieldset>
+
+          {selectedRole && (
+            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+              <h2 className="text-base font-semibold text-slate-900">{selectedRole}</h2>
+              <p>{ROLE_DESCRIPTIONS[selectedRole]}</p>
+            </section>
+          )}
+
+          {selectedRole && (
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:col-span-2">
+              <p className="text-sm font-medium text-slate-900">
+                These questions are intended to give us a general sense of your interest and experience. For
+                applicants who qualify, a follow-up interview will be scheduled to get to know you even better.
+              </p>
+
+              {QUESTIONS_BY_TRACK[track].map((question, index) => (
+                <label key={index} className="block space-y-2 text-sm">
+                  <span className="font-medium">
+                    {question} <span className="text-red-600">*</span>
+                  </span>
+                  <textarea
+                    name={`technologyQuestion${index + 1}`}
+                    className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                    required
+                  />
+                </label>
+              ))}
+            </section>
+          )}
 
           <div className="mt-6 flex items-center justify-between">
             <button
@@ -259,17 +240,16 @@ export default function TechnologyDepartmentPage() {
             </button>
 
             <button
-              type={technologyTrack === "committee-member" ? "button" : "submit"}
+              type="submit"
               className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              onClick={technologyTrack === "committee-member" ? handleNextClick : undefined}
-              disabled={!canProceed || isSubmitting}
+              disabled={isSubmitting}
             >
-              {technologyTrack === "committee-member" ? "Next" : isSubmitting ? "Saving..." : "Submit"}
+              {isSubmitting ? "Saving..." : "Submit"}
             </button>
           </div>
 
           {submitError && (
-            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {submitError}
             </p>
           )}

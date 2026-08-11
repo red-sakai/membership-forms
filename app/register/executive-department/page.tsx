@@ -7,19 +7,12 @@ import { createSupabasePublicClient } from "@/lib/supabase";
 
 const COOKIE_PREFIX = "registration_";
 
-const CREATIVES_OFFICER_ROLES = [
-  "Chief Creatives Officer",
-  "Vice Chief Creatives Officer",
-] as const;
+const EXECUTIVE_ROLES = ["Vice Chief Executive Officer"] as const;
 
-const CREATIVES_QUESTIONS_BY_ROLE: Record<(typeof CREATIVES_OFFICER_ROLES)[number], readonly string[]> = {
-  "Chief Creatives Officer": [
-    "How would you inspire and lead a team of creatives to produce their best work?",
-    "Describe a time you took the lead on a creative project or task. What did you learn from it?",
-  ],
-  "Vice Chief Creatives Officer": [
-    "How would you support the Chief Creatives Officer in keeping projects on track and organized?",
-    "How would you handle it when team members disagree on a design or creative direction?",
+const EXECUTIVE_QUESTIONS_BY_ROLE: Record<(typeof EXECUTIVE_ROLES)[number], readonly string[]> = {
+  "Vice Chief Executive Officer": [
+    "What does being part of the organization's executive team mean to you, and how would you contribute as Vice Chief Executive Officer?",
+    "Describe a time you supported or stepped in for a leader. What did you do, and what did you learn from it?",
   ],
 };
 
@@ -41,7 +34,7 @@ const getRegistrationCookieValue = (key: string) => {
   return cookies.get(`${COOKIE_PREFIX}${key}`) ?? "";
 };
 
-export default function CreativesDepartmentPage() {
+export default function ExecutiveDepartmentPage() {
   const router = useRouter();
   const supabase = createSupabasePublicClient();
   const [selectedRole, setSelectedRole] = useState("");
@@ -72,19 +65,18 @@ export default function CreativesDepartmentPage() {
       return;
     }
 
-    setIsSubmitting(true);
-
     const formData = new FormData(event.currentTarget);
     const questionAnswers = {
-      leadershipQuestion1: String(formData.get("creativesQuestion1") ?? ""),
-      leadershipQuestion2: String(formData.get("creativesQuestion2") ?? ""),
+      leadershipQuestion1: String(formData.get("executiveQuestion1") ?? ""),
+      leadershipQuestion2: String(formData.get("executiveQuestion2") ?? ""),
     };
 
-    const { error } = await supabase.from("registration_creatives_department").insert({
+    setIsSubmitting(true);
+
+    const { error } = await supabase.from("registration_executive_department").insert({
       first_name: firstName,
       last_name: lastName,
       email,
-      team: "",
       application_role: selectedRole,
       question_answers: questionAnswers,
     });
@@ -98,7 +90,7 @@ export default function CreativesDepartmentPage() {
     const { error: interviewError } = await supabase.from("to_be_interviewed").insert({
       name: fullName,
       email,
-      department: "Creatives",
+      department: "Executive",
       team: "",
       role: selectedRole,
       status: "pending",
@@ -112,19 +104,17 @@ export default function CreativesDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/creatives-department/submit");
+    router.push("/register/executive-department/submit");
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 px-4 py-6 font-sans text-zinc-900">
       <main className="mx-auto w-full max-w-3xl rounded-2xl border border-sky-100 bg-white/95 p-6 shadow-lg shadow-blue-100 sm:p-8">
-        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Registration - Creatives Department</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Registration - Executive Department</h1>
 
         <p className="mt-4 text-sm leading-6 text-slate-700">
-          CNCP&apos;s Creative Committee is responsible for enhancing our organization&apos;s presence and
-          communication efforts to reach and engage both internal and external audiences. This committee creates
-          visually appealing digital and print materials such as social media graphics, presentations, and
-          advertisements.
+          The Executive Department oversees the overall direction and governance of the organization, ensuring
+          that all departments work together toward CNCP&apos;s goals.
         </p>
 
         <p className="mt-4 text-sm leading-6 text-slate-700">
@@ -145,11 +135,11 @@ export default function CreativesDepartmentPage() {
               What position would you like to apply for? <span className="text-red-600">*</span>
             </legend>
 
-            {CREATIVES_OFFICER_ROLES.map((role) => (
+            {EXECUTIVE_ROLES.map((role) => (
               <label key={role} className="flex items-start gap-3 text-sm">
                 <input
                   type="radio"
-                  name="creativesRole"
+                  name="executiveRole"
                   value={role}
                   className="mt-1"
                   checked={selectedRole === role}
@@ -168,14 +158,14 @@ export default function CreativesDepartmentPage() {
                 applicants who qualify, a follow-up interview will be scheduled to get to know you even better.
               </p>
 
-              {CREATIVES_QUESTIONS_BY_ROLE[selectedRole as (typeof CREATIVES_OFFICER_ROLES)[number]].map(
+              {EXECUTIVE_QUESTIONS_BY_ROLE[selectedRole as (typeof EXECUTIVE_ROLES)[number]].map(
                 (question, index) => (
                   <label key={index} className="block space-y-2 text-sm">
                     <span className="font-medium">
                       {question} <span className="text-red-600">*</span>
                     </span>
                     <textarea
-                      name={`creativesQuestion${index + 1}`}
+                      name={`executiveQuestion${index + 1}`}
                       className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
                       required
                     />

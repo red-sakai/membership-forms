@@ -1,29 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
 
 import { createSupabasePublicClient } from "@/lib/supabase";
 
-type AdministrativeRoleOption =
-  | "Compliance Officer"
-  | "Meeting & Documentation Officer"
-  | "Liaison Officer";
-
-const ADMINISTRATIVE_ROLE_OPTIONS: readonly AdministrativeRoleOption[] = [
-  "Compliance Officer",
-  "Meeting & Documentation Officer",
-  "Liaison Officer",
-];
-
 const COOKIE_PREFIX = "registration_";
 
-const administrativeQuestionFieldNames = [
-  "administrativeMotivation",
-  "administrativeExperience",
-  "administrativeConfidentiality",
-  "administrativeImprovements",
+const ADMINISTRATIVE_OFFICER_ROLES = [
+  "Chief Administrative Officer",
+  "Vice Chief Administrative Officer",
 ] as const;
+
+const ADMINISTRATIVE_QUESTIONS_BY_ROLE: Record<(typeof ADMINISTRATIVE_OFFICER_ROLES)[number], readonly string[]> = {
+  "Chief Administrative Officer": [
+    "How would you lead the Administrative team in keeping the organization's records and documents reliable?",
+    "Describe a time you managed something carefully, like documents, schedules, or records. How did you stay organized?",
+  ],
+  "Vice Chief Administrative Officer": [
+    "How would you support the Chief Administrative Officer in managing day-to-day tasks and deadlines?",
+    "How would you handle confidential or sensitive information responsibly?",
+  ],
+};
 
 const getRegistrationCookieValue = (key: string) => {
   if (typeof document === "undefined") {
@@ -46,17 +44,9 @@ const getRegistrationCookieValue = (key: string) => {
 export default function AdministrativeDepartmentPage() {
   const router = useRouter();
   const supabase = createSupabasePublicClient();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [selectedRole, setSelectedRole] = useState<AdministrativeRoleOption | "">("");
-  const [canSubmit, setCanSubmit] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const refreshCanSubmit = () => {
-    setTimeout(() => {
-      setCanSubmit(formRef.current?.checkValidity() ?? false);
-    }, 0);
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,9 +55,12 @@ export default function AdministrativeDepartmentPage() {
       return;
     }
 
+    setSubmitError(null);
+
     const firstName = getRegistrationCookieValue("firstName");
     const lastName = getRegistrationCookieValue("lastName");
     const email = getRegistrationCookieValue("email");
+    const fullName = `${firstName} ${lastName}`.trim();
 
     if (!firstName || !lastName || !email) {
       setSubmitError("Missing personal information. Please complete the Personal Information page first.");
@@ -79,20 +72,13 @@ export default function AdministrativeDepartmentPage() {
       return;
     }
 
-    setSubmitError(null);
+    setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const questionAnswers: Record<string, string> = {};
-
-    administrativeQuestionFieldNames.forEach((fieldName) => {
-      const value = String(formData.get(fieldName) ?? "").trim();
-
-      if (value !== "") {
-        questionAnswers[fieldName] = value;
-      }
-    });
-
-    setIsSubmitting(true);
+    const questionAnswers = {
+      leadershipQuestion1: String(formData.get("administrativeQuestion1") ?? ""),
+      leadershipQuestion2: String(formData.get("administrativeQuestion2") ?? ""),
+    };
 
     const { error } = await supabase.from("registration_administrative_department").insert({
       first_name: firstName,
@@ -105,6 +91,21 @@ export default function AdministrativeDepartmentPage() {
     if (error) {
       setIsSubmitting(false);
       setSubmitError(error.message);
+      return;
+    }
+
+    const { error: interviewError } = await supabase.from("to_be_interviewed").insert({
+      name: fullName,
+      email,
+      department: "Administrative",
+      team: "",
+      role: selectedRole,
+      status: "pending",
+    });
+
+    if (interviewError) {
+      setIsSubmitting(false);
+      setSubmitError(interviewError.message);
       return;
     }
 
@@ -125,46 +126,25 @@ export default function AdministrativeDepartmentPage() {
           with partners and offices, the team helps maintain operational continuity, accountability, and trust.
         </p>
 
-        <section className="mt-6 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
-          <h2 className="text-base font-semibold text-slate-900">Administrative Roles</h2>
-          <p>
-            <span className="font-semibold text-slate-900">Compliance Officer:</span> The Compliance Officer
-            ensures that all organizational activities adhere to established policies, regulations, and ethical
-            standards. They review procedures, evaluate compliance with internal and external requirements, and
-            recommend improvements to enhance accountability and integrity. Through consistent monitoring and
-            guidance, the officer upholds transparency and promotes responsible governance within the organization.
-          </p>
-          <p>
-            <span className="font-semibold text-slate-900">Meeting &amp; Documentation Officer:</span> The
-            Meeting &amp; Documentation Officer ensures the smooth flow of leadership operations by managing
-            official communications and meeting records. They are responsible for preparing agendas, documenting
-            minutes, and maintaining the accuracy of official correspondences. Through organized and timely
-            documentation, the officer supports informed decision-making and promotes transparency within the
-            organization&apos;s leadership processes.
-          </p>
-          <p>
-            <span className="font-semibold text-slate-900">Liaison Officer:</span> The Liaison Officer
-            facilitates effective communication and coordination between the organization and external authorities.
-            They handle the delivery, retrieval, and processing of official documents, ensuring accuracy,
-            confidentiality, and timeliness. By maintaining strong professional connections with university
-            offices, partners, and other institutions, the Liaison Officer upholds the organization&apos;s
-            credibility and ensures smooth administrative correspondence.
-          </p>
-        </section>
+        <p className="mt-4 text-sm leading-6 text-slate-700">
+          For detailed information on each department role, you can refer to{" "}
+          <a
+            className="font-medium text-sky-700 underline"
+            href="https://docs.google.com/document/d/1dU6wpyFiGRfjeYCiymvxjvigK2m3VN2BdRBaZOwL8ww/edit?tab=t.0#heading=h.vixkji6185jn"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            this primer
+          </a>.
+        </p>
 
-        <form
-          ref={formRef}
-          className="mt-6 space-y-4 text-sm"
-          onSubmit={handleSubmit}
-          onInput={refreshCanSubmit}
-          onChange={refreshCanSubmit}
-        >
+        <form className="mt-6 space-y-4 text-sm" onSubmit={handleSubmit}>
           <fieldset className="space-y-3 rounded-xl border border-sky-200 bg-sky-50/70 p-4 sm:col-span-2">
             <legend className="px-2 text-sm font-semibold">
-              What role would you like to apply for? <span className="text-red-600">*</span>
+              What position would you like to apply for? <span className="text-red-600">*</span>
             </legend>
 
-            {ADMINISTRATIVE_ROLE_OPTIONS.map((role) => (
+            {ADMINISTRATIVE_OFFICER_ROLES.map((role) => (
               <label key={role} className="flex items-start gap-3 text-sm">
                 <input
                   type="radio"
@@ -183,44 +163,24 @@ export default function AdministrativeDepartmentPage() {
           {selectedRole && (
             <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:col-span-2">
               <p className="text-sm font-medium text-slate-900">
-                These questions are intended to assess your readiness for administrative responsibilities.
+                These questions are intended to give us a general sense of your interest and experience. For
+                applicants who qualify, a follow-up interview will be scheduled to get to know you even better.
               </p>
 
-              <label className="block space-y-2 text-sm">
-                <span className="font-medium">Why are you interested in applying for the {selectedRole} position? <span className="text-red-600">*</span></span>
-                <textarea
-                  name="administrativeMotivation"
-                  className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-                  required
-                />
-              </label>
-
-              <label className="block space-y-2 text-sm">
-                <span className="font-medium">Describe an experience where you handled documents, records, or formal coordination. What process did you follow to stay accurate and organized? <span className="text-red-600">*</span></span>
-                <textarea
-                  name="administrativeExperience"
-                  className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-                  required
-                />
-              </label>
-
-              <label className="block space-y-2 text-sm">
-                <span className="font-medium">How would you handle confidential information and ensure compliance with policies while working under deadlines? <span className="text-red-600">*</span></span>
-                <textarea
-                  name="administrativeConfidentiality"
-                  className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-                  required
-                />
-              </label>
-
-              <label className="block space-y-2 text-sm">
-                <span className="font-medium">What improvements would you suggest to make CNCP&apos;s administrative workflows more efficient and transparent? <span className="text-red-600">*</span></span>
-                <textarea
-                  name="administrativeImprovements"
-                  className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
-                  required
-                />
-              </label>
+              {ADMINISTRATIVE_QUESTIONS_BY_ROLE[
+                selectedRole as (typeof ADMINISTRATIVE_OFFICER_ROLES)[number]
+              ].map((question, index) => (
+                <label key={index} className="block space-y-2 text-sm">
+                  <span className="font-medium">
+                    {question} <span className="text-red-600">*</span>
+                  </span>
+                  <textarea
+                    name={`administrativeQuestion${index + 1}`}
+                    className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                    required
+                  />
+                </label>
+              ))}
             </section>
           )}
 
@@ -236,7 +196,7 @@ export default function AdministrativeDepartmentPage() {
             <button
               type="submit"
               className="inline-flex h-11 items-center justify-center rounded-md bg-sky-600 px-5 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              disabled={!canSubmit || isSubmitting}
+              disabled={isSubmitting}
             >
               {isSubmitting ? "Saving..." : "Submit"}
             </button>

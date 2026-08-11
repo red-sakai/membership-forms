@@ -7,19 +7,19 @@ import { createSupabasePublicClient } from "@/lib/supabase";
 
 const COOKIE_PREFIX = "registration_";
 
-const CREATIVES_OFFICER_ROLES = [
-  "Chief Creatives Officer",
-  "Vice Chief Creatives Officer",
+const RELATIONS_OFFICER_ROLES = [
+  "Chief Relations Officer",
+  "Vice Chief Relations Officer",
 ] as const;
 
-const CREATIVES_QUESTIONS_BY_ROLE: Record<(typeof CREATIVES_OFFICER_ROLES)[number], readonly string[]> = {
-  "Chief Creatives Officer": [
-    "How would you inspire and lead a team of creatives to produce their best work?",
-    "Describe a time you took the lead on a creative project or task. What did you learn from it?",
+const RELATIONS_QUESTIONS_BY_ROLE: Record<(typeof RELATIONS_OFFICER_ROLES)[number], readonly string[]> = {
+  "Chief Relations Officer": [
+    "How would you lead the Relations team in building partnerships and keeping members engaged?",
+    "Describe a time you represented a group or helped connect people to work together. How did it go?",
   ],
-  "Vice Chief Creatives Officer": [
-    "How would you support the Chief Creatives Officer in keeping projects on track and organized?",
-    "How would you handle it when team members disagree on a design or creative direction?",
+  "Vice Chief Relations Officer": [
+    "How would you support the Chief Relations Officer in coordinating the team's activities?",
+    "How would you handle feedback or concerns from members about the organization?",
   ],
 };
 
@@ -41,7 +41,8 @@ const getRegistrationCookieValue = (key: string) => {
   return cookies.get(`${COOKIE_PREFIX}${key}`) ?? "";
 };
 
-export default function CreativesDepartmentPage() {
+// ponytail: team selection and questions removed for now; will be rebuilt later
+export default function RelationsDepartmentPage() {
   const router = useRouter();
   const supabase = createSupabasePublicClient();
   const [selectedRole, setSelectedRole] = useState("");
@@ -76,11 +77,11 @@ export default function CreativesDepartmentPage() {
 
     const formData = new FormData(event.currentTarget);
     const questionAnswers = {
-      leadershipQuestion1: String(formData.get("creativesQuestion1") ?? ""),
-      leadershipQuestion2: String(formData.get("creativesQuestion2") ?? ""),
+      leadershipQuestion1: String(formData.get("relationsQuestion1") ?? ""),
+      leadershipQuestion2: String(formData.get("relationsQuestion2") ?? ""),
     };
 
-    const { error } = await supabase.from("registration_creatives_department").insert({
+    const { error } = await supabase.from("registration_relations_department").insert({
       first_name: firstName,
       last_name: lastName,
       email,
@@ -98,7 +99,7 @@ export default function CreativesDepartmentPage() {
     const { error: interviewError } = await supabase.from("to_be_interviewed").insert({
       name: fullName,
       email,
-      department: "Creatives",
+      department: "Relations",
       team: "",
       role: selectedRole,
       status: "pending",
@@ -112,19 +113,17 @@ export default function CreativesDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/creatives-department/submit");
+    router.push("/register/relations-department/submit");
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 px-4 py-6 font-sans text-zinc-900">
       <main className="mx-auto w-full max-w-3xl rounded-2xl border border-sky-100 bg-white/95 p-6 shadow-lg shadow-blue-100 sm:p-8">
-        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Registration - Creatives Department</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Registration - Relations Department</h1>
 
         <p className="mt-4 text-sm leading-6 text-slate-700">
-          CNCP&apos;s Creative Committee is responsible for enhancing our organization&apos;s presence and
-          communication efforts to reach and engage both internal and external audiences. This committee creates
-          visually appealing digital and print materials such as social media graphics, presentations, and
-          advertisements.
+          The Relations Department focuses on building and strengthening partnerships and fostering a positive,
+          engaged community within the organization.
         </p>
 
         <p className="mt-4 text-sm leading-6 text-slate-700">
@@ -145,18 +144,19 @@ export default function CreativesDepartmentPage() {
               What position would you like to apply for? <span className="text-red-600">*</span>
             </legend>
 
-            {CREATIVES_OFFICER_ROLES.map((role) => (
+            {RELATIONS_OFFICER_ROLES.map((role) => (
               <label key={role} className="flex items-start gap-3 text-sm">
                 <input
                   type="radio"
-                  name="creativesRole"
+                  name="relationsRole"
                   value={role}
                   className="mt-1"
                   checked={selectedRole === role}
                   onChange={() => setSelectedRole(role)}
+                  disabled={role === "Chief Relations Officer"}
                   required
                 />
-                <span>{role}</span>
+                <span className={role === "Chief Relations Officer" ? "text-slate-400" : undefined}>{role}</span>
               </label>
             ))}
           </fieldset>
@@ -168,14 +168,14 @@ export default function CreativesDepartmentPage() {
                 applicants who qualify, a follow-up interview will be scheduled to get to know you even better.
               </p>
 
-              {CREATIVES_QUESTIONS_BY_ROLE[selectedRole as (typeof CREATIVES_OFFICER_ROLES)[number]].map(
+              {RELATIONS_QUESTIONS_BY_ROLE[selectedRole as (typeof RELATIONS_OFFICER_ROLES)[number]].map(
                 (question, index) => (
                   <label key={index} className="block space-y-2 text-sm">
                     <span className="font-medium">
                       {question} <span className="text-red-600">*</span>
                     </span>
                     <textarea
-                      name={`creativesQuestion${index + 1}`}
+                      name={`relationsQuestion${index + 1}`}
                       className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
                       required
                     />
