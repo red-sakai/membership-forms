@@ -24,6 +24,18 @@ const registerSchema = z.object({
       }
     }, "Please provide a valid Facebook link"),
   discordUsername: z.string().trim().min(1, "Discord username is required"),
+  facebookSharedPost: z
+    .string()
+    .trim()
+    .url("Please enter a valid Facebook link")
+    .refine((value) => {
+      try {
+        const url = new URL(value);
+        return url.hostname.toLowerCase().includes("facebook.com");
+      } catch {
+        return false;
+      }
+    }, "Please provide a valid Facebook link to your shared post"),
   linkedinLink: z
     .string()
     .trim()
@@ -82,6 +94,7 @@ type PersonalInfoRecord = {
   last_name: string;
   email: string;
   facebook_link: string;
+  facebook_shared_post: string;
   discord_username: string;
   linkedin_link: string | null;
   pup_webmail: string;
@@ -97,6 +110,7 @@ const toPersonalInfoRecord = (values: RegisterFormValues): PersonalInfoRecord =>
   last_name: values.lastName,
   email: values.email,
   facebook_link: values.facebookLink,
+  facebook_shared_post: values.facebookSharedPost,
   discord_username: values.discordUsername,
   linkedin_link: values.linkedinLink === "" ? null : values.linkedinLink,
   pup_webmail: values.pupWebmail,
@@ -112,6 +126,7 @@ const isSamePersonalInfo = (existing: PersonalInfoRecord, next: PersonalInfoReco
   existing.last_name === next.last_name &&
   existing.email === next.email &&
   existing.facebook_link === next.facebook_link &&
+  existing.facebook_shared_post === next.facebook_shared_post &&
   existing.discord_username === next.discord_username &&
   (existing.linkedin_link ?? null) === (next.linkedin_link ?? null) &&
   existing.pup_webmail === next.pup_webmail &&
@@ -126,6 +141,7 @@ const registerFieldNames: Array<keyof RegisterFormValues> = [
   "lastName",
   "email",
   "facebookLink",
+  "facebookSharedPost",
   "discordUsername",
   "linkedinLink",
   "pupWebmail",
@@ -211,6 +227,7 @@ function RegisterFormPage() {
       lastName: String(formData.get("lastName") ?? ""),
       email: String(formData.get("email") ?? ""),
       facebookLink: String(formData.get("facebookLink") ?? ""),
+      facebookSharedPost: String(formData.get("facebookSharedPost") ?? ""),
       discordUsername: String(formData.get("discordUsername") ?? ""),
       linkedinLink: String(formData.get("linkedinLink") ?? ""),
       pupWebmail: String(formData.get("pupWebmail") ?? ""),
@@ -230,6 +247,7 @@ function RegisterFormPage() {
         lastName: fieldErrors.lastName?.[0],
         email: fieldErrors.email?.[0],
         facebookLink: fieldErrors.facebookLink?.[0],
+        facebookSharedPost: fieldErrors.facebookSharedPost?.[0],
         discordUsername: fieldErrors.discordUsername?.[0],
         linkedinLink: fieldErrors.linkedinLink?.[0],
         pupWebmail: fieldErrors.pupWebmail?.[0],
@@ -265,7 +283,7 @@ function RegisterFormPage() {
     const { data: previousRecord, error: previousRecordError } = await supabase
       .from("registration_personal_info")
       .select(
-        "first_name,last_name,email,facebook_link,discord_username,linkedin_link,pup_webmail,phone,course_year_section,certificate_link,college_campus,membership_type",
+        "first_name,last_name,email,facebook_link,facebook_shared_post,discord_username,linkedin_link,pup_webmail,phone,course_year_section,certificate_link,college_campus,membership_type",
       )
       .eq("email", personalInfoPayload.email)
       .order("created_at", { ascending: false })
@@ -402,6 +420,32 @@ function RegisterFormPage() {
               />
               {errors.facebookLink && <p className="text-xs text-red-600">{errors.facebookLink}</p>}
             </label>
+
+            <div className="space-y-2 text-sm sm:col-span-2">
+              <div className="flex items-center gap-1.5 font-medium">
+                <span>
+                  Facebook Shared Post <span className="text-red-600">*</span>
+                </span>
+                <details className="relative inline">
+                  <summary className="inline-flex h-4 w-4 cursor-pointer list-none items-center justify-center rounded-full bg-slate-200 text-xs text-slate-600 hover:bg-slate-300 [&::-webkit-details-marker]:hidden">
+                    ?
+                  </summary>
+                  <span className="absolute left-0 top-5 z-10 w-64 rounded-md border border-slate-200 bg-white p-2 text-xs font-normal text-slate-600 shadow-lg">
+                    The link to your shared post of CNCP&apos;s Recruitment
+                  </span>
+                </details>
+              </div>
+              <input
+                type="url"
+                name="facebookSharedPost"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-sky-500"
+                placeholder="https://www.facebook.com/..."
+                defaultValue={getDefaultValue("facebookSharedPost")}
+                onBlur={handleFieldBlur}
+                required
+              />
+              {errors.facebookSharedPost && <p className="text-xs text-red-600">{errors.facebookSharedPost}</p>}
+            </div>
 
             <label className="space-y-2 text-sm sm:col-span-2">
               <span className="font-medium">Discord Username <span className="text-red-600">*</span></span>
