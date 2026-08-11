@@ -90,6 +90,7 @@ const PERSONAL_INFO_RATE_LIMIT_WINDOW_MS = 15 * 1000;
 const PERSONAL_INFO_RATE_LIMIT_STORAGE_KEY = "registration_personal_info_last_submit_at";
 
 type PersonalInfoRecord = {
+  id?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -272,9 +273,10 @@ function RegisterFormPage() {
     const { data: previousRecord, error: previousRecordError } = await supabase
       .from("registration_personal_info")
       .select(
-        "first_name,last_name,email,facebook_link,facebook_shared_post,discord_username,linkedin_link,pup_webmail,phone,course_year_section,certificate_link,college_campus,membership_type",
+        "id,first_name,last_name,email,facebook_link,facebook_shared_post,discord_username,linkedin_link,pup_webmail,phone,course_year_section,certificate_link,college_campus,membership_type",
       )
-      .eq("email", personalInfoPayload.email)
+      .eq("first_name", personalInfoPayload.first_name)
+      .eq("last_name", personalInfoPayload.last_name)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle<PersonalInfoRecord>();
@@ -285,9 +287,20 @@ function RegisterFormPage() {
       return;
     }
 
-    const shouldInsertNewRecord = !previousRecord || !isSamePersonalInfo(previousRecord, personalInfoPayload);
+    if (previousRecord && isSamePersonalInfo(previousRecord, personalInfoPayload)) {
+      // ponytail: name match with identical info — skip, resubmitting same form is not a duplicate row
+    } else if (previousRecord) {
+      const { error: updateError } = await supabase
+        .from("registration_personal_info")
+        .update(personalInfoPayload)
+        .eq("id", previousRecord.id);
 
-    if (shouldInsertNewRecord) {
+      if (updateError) {
+        setIsSubmitting(false);
+        setSubmitError(updateError.message);
+        return;
+      }
+    } else {
       const { error: insertError } = await supabase.from("registration_personal_info").insert(personalInfoPayload);
 
       if (insertError) {
