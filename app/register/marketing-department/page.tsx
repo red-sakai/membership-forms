@@ -112,7 +112,7 @@ export default function MarketingDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/marketing-department/submit");
+    router.push(`/register/marketing-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (

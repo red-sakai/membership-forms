@@ -1,4 +1,6 @@
-export default function RelationsDepartmentPublicSubmitPage() {
+import SubmissionConfirmation from "@/app/register/submission-confirmation";
+
+export default function ExecutiveDepartmentSubmitPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 px-4 py-6 font-sans text-zinc-900">
       <main className="mx-auto w-full max-w-3xl rounded-2xl border border-sky-100 bg-white/95 p-6 shadow-lg shadow-blue-100 sm:p-8">
@@ -21,6 +23,8 @@ export default function RelationsDepartmentPublicSubmitPage() {
           Also, join us on Discord if the position you&apos;re applying for requires an interview, or join to
           get the latest announcements: <a className="text-sky-700 underline" href="https://discord.gg/n8gGMvky" target="_blank" rel="noopener noreferrer">https://discord.gg/n8gGMvky</a>.
         </p>
+
+        <SubmissionConfirmation />
       </main>
     </div>
   );

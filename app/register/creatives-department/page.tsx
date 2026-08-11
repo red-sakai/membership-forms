@@ -112,7 +112,7 @@ export default function CreativesDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/creatives-department/submit");
+    router.push(`/register/creatives-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (

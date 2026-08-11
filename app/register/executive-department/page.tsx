@@ -104,7 +104,7 @@ export default function ExecutiveDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/executive-department/submit");
+    router.push(`/register/executive-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (

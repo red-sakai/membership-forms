@@ -153,7 +153,7 @@ export default function TechnologyDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/technology-department/submit");
+    router.push(`/register/technology-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (

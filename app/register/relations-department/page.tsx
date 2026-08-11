@@ -113,7 +113,7 @@ export default function RelationsDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/relations-department/submit");
+    router.push(`/register/relations-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (

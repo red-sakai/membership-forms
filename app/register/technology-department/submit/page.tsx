@@ -1,3 +1,5 @@
+import SubmissionConfirmation from "@/app/register/submission-confirmation";
+
 export default function TechnologyDepartmentSubmitPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 px-4 py-6 font-sans text-zinc-900">
@@ -17,9 +19,7 @@ export default function TechnologyDepartmentSubmitPage() {
           <p>YouTube: <a className="text-sky-700 underline" href="https://youtube.com/@cncp_mnl" target="_blank" rel="noopener noreferrer">https://youtube.com/@cncp_mnl</a></p>
         </section>
 
-        <p className="mt-6 text-sm leading-7 text-slate-700">
-          You have successfully submitted your Technology Department cadet application.
-        </p>
+        <SubmissionConfirmation />
       </main>
     </div>
   );

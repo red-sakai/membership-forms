@@ -111,7 +111,7 @@ export default function AdministrativeDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/administrative-department/submit");
+    router.push(`/register/administrative-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (

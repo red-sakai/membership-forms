@@ -112,7 +112,7 @@ export default function OperationsDepartmentPage() {
 
     setIsSubmitting(false);
 
-    router.push("/register/operations-department/submit");
+    router.push(`/register/operations-department/submit?role=${encodeURIComponent(selectedRole)}`);
   };
 
   return (
