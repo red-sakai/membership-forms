@@ -24,6 +24,11 @@ const TECHNOLOGY_ROLES: readonly TechnologyRole[] = [
   "DevNet Co-Lead",
 ];
 
+const DISABLED_ROLES: ReadonlySet<TechnologyRole> = new Set([
+  "Enterprise Networking Lead",
+  "Enterprise Networking Co-Lead",
+]);
+
 const ROLE_DESCRIPTIONS: Record<TechnologyRole, string> = {
   "Enterprise Networking Lead":
     "Mentors members through a curriculum aligned with the Cisco Certified Network Associate (CCNA), covering network fundamentals, design, configuration, security, and troubleshooting. Organizes hands-on laboratories and oversees projects that develop practical skills in managing reliable enterprise networks.",
@@ -186,7 +191,10 @@ export default function TechnologyDepartmentPage() {
             </legend>
 
             {TECHNOLOGY_ROLES.map((role) => (
-              <label key={role} className="flex items-start gap-3 text-sm">
+              <label
+                key={role}
+                className={`flex items-start gap-3 text-sm ${DISABLED_ROLES.has(role) ? "text-slate-400" : ""}`}
+              >
                 <input
                   type="radio"
                   name="technologyRole"
@@ -194,9 +202,11 @@ export default function TechnologyDepartmentPage() {
                   className="mt-1"
                   checked={selectedRole === role}
                   onChange={() => setSelectedRole(role)}
+                  disabled={DISABLED_ROLES.has(role)}
                   required
                 />
                 <span>{role}</span>
+                {DISABLED_ROLES.has(role) && <span className="text-xs font-medium text-slate-400">(closed)</span>}
               </label>
             ))}
           </fieldset>

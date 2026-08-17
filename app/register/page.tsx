@@ -606,9 +606,13 @@ function RegisterFormPage() {
                 </option>
                 <option value="Technology Department">Technology Department</option>
                 <option value="Operations Department">Operations Department</option>
-                <option value="Creatives Department">Creatives Department</option>
+                <option value="Creatives Department" disabled>
+                  Creatives Department (closed)
+                </option>
                 <option value="Marketing Department">Marketing Department</option>
-                <option value="Relations Department">Relations Department</option>
+                <option value="Relations Department" disabled>
+                  Relations Department (closed)
+                </option>
                 <option value="Administrative Department">Administrative Department</option>
                 <option value="Executive Department">Executive Department</option>
               </select>
