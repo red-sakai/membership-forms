@@ -27,6 +27,8 @@ const TECHNOLOGY_ROLES: readonly TechnologyRole[] = [
 const DISABLED_ROLES: ReadonlySet<TechnologyRole> = new Set([
   "Enterprise Networking Lead",
   "Enterprise Networking Co-Lead",
+  "CyberOps Lead",
+  "CyberOps Co-Lead",
 ]);
 
 const ROLE_DESCRIPTIONS: Record<TechnologyRole, string> = {
