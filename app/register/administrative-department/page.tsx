@@ -7,6 +7,10 @@ import { createSupabasePublicClient } from "@/lib/supabase";
 
 const COOKIE_PREFIX = "registration_";
 
+const DISABLED_ADMINISTRATIVE_ROLES: ReadonlySet<(typeof ADMINISTRATIVE_OFFICER_ROLES)[number]> = new Set([
+  "Vice Chief Administrative Officer",
+]);
+
 const ADMINISTRATIVE_OFFICER_ROLES = [
   "Chief Administrative Officer",
   "Vice Chief Administrative Officer",
@@ -145,7 +149,7 @@ export default function AdministrativeDepartmentPage() {
             </legend>
 
             {ADMINISTRATIVE_OFFICER_ROLES.map((role) => (
-              <label key={role} className="flex items-start gap-3 text-sm">
+              <label key={role} className={`flex items-start gap-3 text-sm ${DISABLED_ADMINISTRATIVE_ROLES.has(role) ? "text-slate-400" : ""}`}>
                 <input
                   type="radio"
                   name="administrativeRole"
@@ -153,9 +157,11 @@ export default function AdministrativeDepartmentPage() {
                   className="mt-1"
                   checked={selectedRole === role}
                   onChange={() => setSelectedRole(role)}
+                  disabled={DISABLED_ADMINISTRATIVE_ROLES.has(role)}
                   required
                 />
                 <span>{role}</span>
+                {DISABLED_ADMINISTRATIVE_ROLES.has(role) && <span className="text-xs font-medium text-slate-400">(closed)</span>}
               </label>
             ))}
           </fieldset>
