@@ -617,7 +617,9 @@ function RegisterFormPage() {
                 <option value="Relations Department" disabled>
                   Relations Department (closed)
                 </option>
-                <option value="Administrative Department">Administrative Department</option>
+                <option value="Administrative Department" disabled>
+                  Administrative Department (closed)
+                </option>
                 <option value="Executive Department">Executive Department</option>
               </select>
               {errors.membershipType && <p className="text-xs text-red-600">{errors.membershipType}</p>}
